@@ -48,3 +48,16 @@ exports.verifyCompany = asyncHandler(async (req, res) => {
     return response.forbidden("Invalid or expired token", res);
   }
 });
+
+
+const slugify = (text) => text.toString().toLowerCase().trim().replace(/\s+/g, '-');
+exports.companySlugInfo = asyncHandler(async (req,res) => {
+    const companies = await models.company.find();
+
+    const Company = companies.find((c) => slugify(c.name) === req.params.slug);
+    if (!Company) {
+      return response.success("User not found!", null, res);
+    }
+
+    return response.success("User found successfully!", Company, res);
+})

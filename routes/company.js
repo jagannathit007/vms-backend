@@ -3,10 +3,11 @@ const router = express.Router();
 const companyController = require("../controllers/super-admin/company");
 const {superAdminAuthToken, companyAuthToken} = require("../middlewares/authenticator");
 const upload = require("../utils/upload");
-const { signInCompany, verifyCompany } = require("../controllers/company-admin/company-auth");
+const { signInCompany, verifyCompany, companySlugInfo } = require("../controllers/company-admin/company-auth");
 
 router.post("/login" , signInCompany)
 router.get("/verify-company", companyAuthToken, verifyCompany);
+router.get("/slug-info/:slug",companySlugInfo)
 
 router.post("/create",superAdminAuthToken, upload.single("logo"), companyController.createCompany);
 router.put("/update/:id",superAdminAuthToken, upload.single("logo"), companyController.updateCompany);
