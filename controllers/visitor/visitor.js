@@ -2,23 +2,70 @@ const asyncHandler = require("express-async-handler");
 const Company = require("../../models/company");
 const response = require("../../utils/response");
 const { visitor } = require("../../models/zindex");
+const VisitorField = require("../../models/visitorField");
 
-exports.createVisitor = asyncHandler(async (req,res) => {
-    const {name , number , purpose} = req.body;
-    const {companyId} = req.params;
-    if(!name || !number || !purpose){
-        return response.forbidden("All Fields Are Required")
-    }
+exports.createVisitorField = asyncHandler(async (req, res) => {
+  const { label, fieldType } = req.body;
+  const companyId = req.user._id;
 
-    const visitors = await visitor.create({
-        name,
-        number,
-        purpose,
-        companyId
-    })
+  if (!label) return response.badRequest("Label is required", res);
 
-    return response.success("Visitor Created Successfully", visitors , res);
-})
+  const field = await VisitorField.create({ label, fieldType, companyId });
+  return response.success("Field added successfully", field, res);
+});
+
+exports.getVisitorFields = asyncHandler(async (req, res) => {
+  const companyId = req.user._id;
+
+  const fields = await VisitorField.find({ companyId }).sort({ updatedAt: 1 });
+  return response.success("Fields fetched", fields, res);
+});
+exports.getVisitorFormFields = asyncHandler(async (req, res) => {
+  const {companyId} = req.params;
+
+  const fields = await VisitorField.find({ companyId }).sort({ updatedAt: 1 });
+  return response.success("Fields fetched", fields, res);
+});
+
+exports.updateVisitorField = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { label, fieldType } = req.body;
+
+  const updated = await VisitorField.findByIdAndUpdate(
+    id,
+    { label, fieldType },
+    { new: true }
+  );
+
+  return response.success("Field updated successfully", updated, res);
+});
+
+exports.deleteVisitorField = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  await VisitorField.findByIdAndDelete(id);
+  return response.success("Field deleted successfully", {}, res);
+});
+
+
+
+
+
+exports.createVisitor = asyncHandler(async (req, res) => {
+  const { companyId } = req.params;
+  const formData = req.body;
+
+  if (!companyId || !formData || Object.keys(formData).length === 0) {
+    return response.forbidden("All Fields Are Required", res);
+  }
+
+  const newVisitor = await visitor.create({
+    companyId,
+    fields: formData
+  });
+
+  return response.success("Visitor Created Successfully", newVisitor, res);
+});
 
 
 exports.getCompanyVisitor = asyncHandler(async (req, res) => {
