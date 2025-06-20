@@ -5,6 +5,7 @@ const { encrypt, decrypt } = require("../../utils/encryptor");
 const fs = require("fs");
 const path = require("path");
 const { visitor } = require("../../models/zindex");
+const visitorField = require("../../models/visitorField");
 
     const deleteFile = (filePath) => {
       fs.unlink(filePath, (err) => {
@@ -41,6 +42,15 @@ const encryptedPassword = encrypt(password);
     address,
     isActive,
   });
+
+  // 2. Insert 3 default visitor fields
+  const defaultFields = [
+    { label: 'Name', fieldType: 'text', companyId: company._id },
+    { label: 'Mobile No.', fieldType: 'number', companyId: company._id },
+    { label: 'Purpose', fieldType: 'textarea', companyId: company._id }
+  ];
+
+  await visitorField.insertMany(defaultFields);
 
   return response.success("Company created successfully", company, res);
 });
