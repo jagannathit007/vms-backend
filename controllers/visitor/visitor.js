@@ -1,4 +1,6 @@
 const asyncHandler = require("express-async-handler");
+const fs = require("fs");
+const path = require("path");
 const Company = require("../../models/company");
 const response = require("../../utils/response");
 const { visitor } = require("../../models/zindex");
@@ -80,24 +82,30 @@ exports.deleteVisitorField = asyncHandler(async (req, res) => {
 });
 
 
-
-
-
 exports.createVisitor = asyncHandler(async (req, res) => {
   const { companyId } = req.params;
-  const formData = req.body;
+  const formData = { ...req.body };
 
-  if (!companyId || !formData || Object.keys(formData).length === 0) {
+  if (!companyId || (Object.keys(formData).length === 0 && req.files.length === 0)) {
     return response.forbidden("All Fields Are Required", res);
+  }
+
+  // Map uploaded files to corresponding field labels
+  if (req.files && req.files.length > 0) {
+    req.files.forEach((file) => {
+      formData[file.fieldname] = file.path; // This stores: "uploads/visitor-images/xxxx.png"
+    });
   }
 
   const newVisitor = await visitor.create({
     companyId,
-    fields: formData
+    fields: formData,
   });
 
   return response.success("Visitor Created Successfully", newVisitor, res);
 });
+
+
 
 
 exports.getCompanyVisitor = asyncHandler(async (req, res) => {

@@ -1,7 +1,9 @@
 const express = require('express')
 const { createVisitor, getCompanyVisitor, getDashboardVisitor, createVisitorField, getVisitorFields, updateVisitorField, deleteVisitorField, getVisitorFormFields } = require('../controllers/visitor/visitor')
-const { companyAuthToken } = require('../middlewares/authenticator')
+const { companyAuthToken } = require('../middlewares/authenticator');
+const visitorUpload = require('../utils/visitorUpload');
 const router = express.Router()
+
 
 router.post("/visitor-fields", companyAuthToken, createVisitorField);
 router.get("/visitor-fields", companyAuthToken, getVisitorFields);
@@ -12,7 +14,7 @@ router.get("/visitor-fields/form/:companyId", getVisitorFormFields);
 
 
 
-router.post('/create/:companyId', createVisitor)
+router.post("/create/:companyId", visitorUpload.any(), createVisitor);
 
 router.get('/company-visitor' , companyAuthToken ,getCompanyVisitor )
 
