@@ -215,3 +215,15 @@ exports.UpdateCompanyPassword = asyncHandler(async (req, res) => {
 
   return response.success("Password updated successfully", null, res);
 });
+
+
+exports.companyInfoVisit = asyncHandler(async (req,res) => {
+  const {companyId} = req.params;
+  const company = await Company.findById(companyId).select("logo name");
+
+    if (!company) {
+      return response.success("User not found!", null, res);
+    }
+
+    return response.success("User found successfully!", company, res);
+})

@@ -5,12 +5,29 @@ const { visitor } = require("../../models/zindex");
 const VisitorField = require("../../models/visitorField");
 
 exports.createVisitorField = asyncHandler(async (req, res) => {
-  const { label, fieldType } = req.body;
+  const { label, fieldType, validation } = req.body;
   const companyId = req.user._id;
 
   if (!label) return response.badRequest("Label is required", res);
 
-  const field = await VisitorField.create({ label, fieldType, companyId });
+  if (fieldType === 'number') {
+    const min = validation?.min;
+    const max = validation?.max;
+    if (min !== undefined && max !== undefined && min > max) {
+      return response.badRequest("Min value cannot be greater than max value", res);
+    }
+  }
+
+  const field = await VisitorField.create({
+    label,
+    fieldType,
+    companyId,
+    validation: fieldType === 'number' ? {
+      min: validation?.min ?? undefined,
+      max: validation?.max ?? undefined,
+    } : undefined
+  });
+
   return response.success("Field added successfully", field, res);
 });
 
@@ -29,11 +46,26 @@ exports.getVisitorFormFields = asyncHandler(async (req, res) => {
 
 exports.updateVisitorField = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { label, fieldType } = req.body;
+  const { label, fieldType, validation } = req.body;
+
+  if (fieldType === 'number') {
+    const min = validation?.min;
+    const max = validation?.max;
+    if (min !== undefined && max !== undefined && min > max) {
+      return response.badRequest("Min value cannot be greater than max value", res);
+    }
+  }
 
   const updated = await VisitorField.findByIdAndUpdate(
     id,
-    { label, fieldType },
+    {
+      label,
+      fieldType,
+      validation: fieldType === 'number' ? {
+        min: validation?.min ?? undefined,
+        max: validation?.max ?? undefined,
+      } : undefined
+    },
     { new: true }
   );
 

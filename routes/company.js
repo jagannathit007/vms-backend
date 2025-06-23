@@ -9,6 +9,8 @@ router.post("/login" , signInCompany)
 router.get("/verify-company", companyAuthToken, verifyCompany);
 router.get("/slug-info/:slug",companySlugInfo)
 
+router.get("/company-info/:companyId",companyController.companyInfoVisit)
+
 router.post("/create",superAdminAuthToken, upload.single("logo"), companyController.createCompany);
 router.put("/update/:id",superAdminAuthToken, upload.single("logo"), companyController.updateCompany);
 router.delete("/delete/:id", superAdminAuthToken, companyController.deleteCompany);
