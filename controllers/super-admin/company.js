@@ -7,11 +7,12 @@ const path = require("path");
 const { visitor } = require("../../models/zindex");
 const visitorField = require("../../models/visitorField");
 
-    const deleteFile = (filePath) => {
-      fs.unlink(filePath, (err) => {
-        if (err) console.error("Failed to delete image:", err);
-      });
-    };
+const deleteFile = (filePath) => {
+  fs.unlink(filePath, (err) => {
+    if (err) console.error("Failed to delete image:", err);
+  });
+};
+
 exports.createCompany = asyncHandler(async (req, res) => {
   const { name, email, password,mobile,pname,address, isActive } = req.body;
   const logo = req.file ? req.file.path : null;
@@ -20,7 +21,6 @@ exports.createCompany = asyncHandler(async (req, res) => {
     if (logo) deleteFile(logo);
     return response.success("All Fields Are Required",null,res)
   }
-
   if(!logo){
     return response.success("Logo image is Required",null,res)
   }
@@ -42,16 +42,14 @@ const encryptedPassword = encrypt(password);
     address,
     isActive,
   });
-
   // 2. Insert 3 default visitor fields
   const defaultFields = [
-    { label: 'Name', fieldType: 'text', companyId: company._id },
-    { label: 'Mobile No.', fieldType: 'number', companyId: company._id },
-    { label: 'Purpose', fieldType: 'textarea', companyId: company._id }
+    { label: 'Mobile No', fieldType: 'number', companyId: company._id,"validation":{min:10,max:10},position:1 },
+    { label: 'Name', fieldType: 'text', companyId: company._id ,position:2},
+    { label: 'Purpose', fieldType: 'textarea', companyId: company._id,position:3 }
   ];
 
   await visitorField.insertMany(defaultFields);
-
   return response.success("Company created successfully", company, res);
 });
 
@@ -74,9 +72,9 @@ exports.updateCompany = asyncHandler(async (req, res) => {
     return response.success("Email already exists.", null, res);
   }
 
-if (updates.password) {
-  updates.password = encrypt(updates.password);
-}
+  if (updates.password) {
+    updates.password = encrypt(updates.password);
+  }
 
   if (req.file) {
     if (existingCompany.logo) {
@@ -95,7 +93,6 @@ if (updates.password) {
 
 exports.deleteCompany = asyncHandler(async (req, res) => {
   const { id } = req.params;
-
   const company = await Company.findById(id);
   if (!company) return response.notFound(res);
 
@@ -105,10 +102,8 @@ exports.deleteCompany = asyncHandler(async (req, res) => {
 
   const result = await Company.findByIdAndDelete(id);
   if (!result) return response.notFound(res);
-
   return response.success("Company deleted successfully", null, res);
 });
-
 
 exports.getAllCompany = asyncHandler(async (req,res) =>{
   const companies = await Company.find();
@@ -131,23 +126,13 @@ exports.updateStatus = asyncHandler(async (req,res) => {
   company.isActive = !company.isActive;
   await company.save();
 
-  return response.success(
-    `Company status updated to ${company.isActive ? 'Active' : 'Inactive'}`,
-    company,
-    res
-  );
+  return response.success(`Company status updated to ${company.isActive ? 'Active' : 'Inactive'}`,company,res);
 }) 
 
 exports.getDashboardCompany = asyncHandler(async (req, res) => {
-
   const totalCompanies = await Company.countDocuments();
-
   const totalVisitor = await visitor.countDocuments();
-
-  return response.success("Company stats fetched", {
-    totalCompanies,
-    totalVisitor
-  }, res);
+  return response.success("Company stats fetched", {totalCompanies,totalVisitor}, res);
 });
 
 exports.updateCompanyProfile = asyncHandler(async (req, res) => {
@@ -185,10 +170,8 @@ exports.updateCompanyProfile = asyncHandler(async (req, res) => {
 
   const updatedCompany = await Company.findByIdAndUpdate(id, updates, { new: true });
   if (!updatedCompany) return response.success("Failed to update profile.", null, res);
-
   return response.success("Profile updated successfully", updatedCompany, res);
 });
-
 
 exports.UpdateCompanyPassword = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -197,7 +180,6 @@ exports.UpdateCompanyPassword = asyncHandler(async (req, res) => {
   if (!currentPassword || !newPassword || !confirmPassword) {
     return response.success("All fields are required.", null, res);
   }
-
   if (newPassword !== confirmPassword) {
     return response.success("New password and confirm password do not match.", null, res);
   }
@@ -209,18 +191,24 @@ exports.UpdateCompanyPassword = asyncHandler(async (req, res) => {
   if (decryptedPassword !== currentPassword) {
     return response.success("Current password is incorrect.", null, res);
   }
-
   company.password = encrypt(newPassword);
   await company.save();
 
   return response.success("Password updated successfully", null, res);
 });
 
-
 exports.companyInfoVisit = asyncHandler(async (req,res) => {
   const {companyId} = req.params;
-  const company = await Company.findById(companyId).select("logo name");
 
+  const companyStatus = await Company.findById(companyId).select("isActive").lean();
+    if (!companyStatus) {
+      return response.success("Company not found!", null, res);
+    }
+    if (!companyStatus.isActive) {
+      return response.success("Company is inactive!", null, res);
+    }
+
+  const company = await Company.findById(companyId).select("logo name");
     if (!company) {
       return response.success("User not found!", null, res);
     }
