@@ -200,7 +200,7 @@ exports.sendOtp = asyncHandler(async (req, res) => {
   const { mobile, companyId } = req.body;
   if (!mobile || !companyId) return response.badRequest("Mobile number and Company ID required", res);
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otp = Math.floor(1000 + Math.random() * 9000).toString();
   await Otp.findOneAndDelete({ mobile, companyId });
   await Otp.create({ mobile, otp, companyId });
 

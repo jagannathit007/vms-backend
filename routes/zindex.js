@@ -10,5 +10,13 @@ module.exports = [
   {
     path: "/visitor",
     file: require("./visitor")
+  },
+  {
+    path: "/member",
+    file: require("./member")
+  },
+  {
+    path: "/watchmen",
+    file: require("./watchmen")
   }
 ];
