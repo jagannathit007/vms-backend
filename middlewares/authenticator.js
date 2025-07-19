@@ -53,3 +53,26 @@ exports.companyAuthToken = async (req, res, next) => {
     return response.forbidden("Invalid or expired token", res);
   }
 };
+
+
+
+exports.watchmenAuthToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+
+    if (!token) return response.unauthorized(res);
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const watchmens = await models.watchmen.findById(decoded.id).lean();
+    if (!watchmens) return response.unauthorized(res);
+
+    req.token = decoded;
+    req.user = watchmens;
+    next();
+  } catch (err) {
+    console.error("Auth error:", err.message);
+    return response.forbidden("Invalid or expired token", res);
+  }
+};

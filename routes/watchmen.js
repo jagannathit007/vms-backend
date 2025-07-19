@@ -8,4 +8,6 @@ router.get('/company/:companyId',companyAuthToken, watchmenController.getWatchme
 router.put('/update/:id',companyAuthToken, watchmenController.updateWatchmen);
 router.delete('/delete/:id',companyAuthToken, watchmenController.deleteWatchmen);
 
+router.post('/signin', watchmenController.signInWatchmen);
+
 module.exports = router;

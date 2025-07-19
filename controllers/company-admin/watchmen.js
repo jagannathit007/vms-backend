@@ -2,6 +2,8 @@ const Watchmen = require('../../models/watchmen');
 const asyncHandler = require('express-async-handler');
 const response = require('../../utils/response');
 const { encrypt, decrypt } = require('../../utils/encryptor');
+const helpers = require("../../utils/helpers");
+
 
 exports.createWatchmen = asyncHandler(async (req, res) => {
   const { name, mobile, password, companyId } = req.body;
@@ -80,4 +82,30 @@ exports.deleteWatchmen = asyncHandler(async (req, res) => {
 
   await Watchmen.findByIdAndDelete(id);
   return response.success("Entry Point deleted successfully", null, res);
+});
+
+
+
+exports.signInWatchmen = asyncHandler(async (req, res) => {
+  const { mobile, password } = req.body;
+
+  if (!mobile || !password) {
+    return response.forbidden("All fields are required", res);
+  }
+
+  let company = await Watchmen.findOne({ mobile }).lean().populate('companyId');
+  if (!company) {
+    return response.success("Invalid credentials!", null, res);
+  }
+
+  let encryptedPassword = company.password;
+  let plainTextPassword = decrypt(encryptedPassword);
+
+  if (plainTextPassword !== password) {
+    return response.success("Invalid credentials!", null, res);
+  }
+
+  const token = helpers.generateToken({ id: String(company._id)});
+
+  return response.success("Watchmen login successfully!", {token,company}, res);
 });

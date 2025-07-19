@@ -135,23 +135,23 @@ exports.deleteVisitorField = asyncHandler(async (req, res) => {
 });
 
 
-exports.createVisitor = asyncHandler(async (req, res) => {
-  const { companyId } = req.params;
-  const formData = { ...req.body };
+// exports.createVisitor = asyncHandler(async (req, res) => {
+//   const { companyId } = req.params;
+//   const formData = { ...req.body };
 
-  if (!companyId || (Object.keys(formData).length === 0 && req.files.length === 0)) {
-    return response.forbidden("All Fields Are Required", res);
-  }
-  // Map uploaded files to corresponding field labels
-  if (req.files && req.files.length > 0) {
-    req.files.forEach((file) => {
-      formData[file.fieldname] = file.path; // This stores: "uploads/visitor-images/xxxx.png"
-    });
-  }
+//   if (!companyId || (Object.keys(formData).length === 0 && req.files.length === 0)) {
+//     return response.forbidden("All Fields Are Required", res);
+//   }
+//   // Map uploaded files to corresponding field labels
+//   if (req.files && req.files.length > 0) {
+//     req.files.forEach((file) => {
+//       formData[file.fieldname] = file.path; // This stores: "uploads/visitor-images/xxxx.png"
+//     });
+//   }
 
-  const newVisitor = await visitor.create({companyId,fields: formData,});
-  return response.success("Visitor Created Successfully", newVisitor, res);
-});
+//   const newVisitor = await visitor.create({companyId,fields: formData,});
+//   return response.success("Visitor Created Successfully", newVisitor, res);
+// });
 
 exports.getCompanyVisitor = asyncHandler(async (req, res) => {
   const companyId = req.user._id;
@@ -224,6 +224,84 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
 });
 
 
+// exports.getVisitorInfo = asyncHandler(async (req, res) => {
+//   const { companyId, label, number } = req.query;
+//   if (!companyId || !label || !number) {
+//     return response.badRequest("Missing required fields", res);
+//   }
+
+//   const visitorDetails = await visitor.findOne({
+//     companyId,
+//     $expr: {
+//       $eq: [`$fields.${label}`, number]
+//     }
+//   }).sort({ createdAt: -1 });;
+
+//   if (!visitorDetails) {
+//     return response.success("No visitor found", null, res);
+//   }
+//   return response.success("Visitor data fetched", visitorDetails.fields, res);
+// });
+
+
+
+
+
+
+exports.createVisitor = asyncHandler(async (req, res) => {
+  const { companyId } = req.params;
+  const formData = { ...req.body };
+
+  if (!companyId || (Object.keys(formData).length === 0 && req.files.length === 0)) {
+    return response.forbidden("All Fields Are Required", res);
+  }
+
+  // Map uploaded files to corresponding field labels
+  if (req.files && req.files.length > 0) {
+    req.files.forEach((file) => {
+      formData[file.fieldname] = file.path; // Stores: "uploads/visitor-images/xxxx.png"
+    });
+  }
+
+  const newVisitor = await visitor.create({
+    companyId,
+    fields: formData,
+    entryTime: new Date(), // Set entry time
+    status: 'entered' // Set status to entered
+  });
+
+  return response.success("Visitor Created Successfully", newVisitor, res);
+});
+
+exports.exitVisitor = asyncHandler(async (req, res) => {
+  const { companyId } = req.params;
+  const { mobile, label } = req.body;
+
+  if (!companyId || !mobile || !label) {
+    return response.badRequest("Mobile number, label, and companyId are required", res);
+  }
+
+  // Find the latest visitor record with no exit time
+  const visitorRecord = await visitor.findOne({
+    companyId,
+    $expr: { $eq: [`$fields.${label}`, mobile] },
+    exitTime: null,
+    status: 'entered'
+  }).sort({ createdAt: -1 });
+
+  if (!visitorRecord) {
+    return response.notFound("No active visitor found for this mobile number", res);
+  }
+
+  // Update the visitor record with exit time and status
+  visitorRecord.exitTime = new Date();
+  visitorRecord.status = 'exited';
+  await visitorRecord.save();
+
+  return response.success("Visitor exit recorded successfully", visitorRecord, res);
+});
+
+
 exports.getVisitorInfo = asyncHandler(async (req, res) => {
   const { companyId, label, number } = req.query;
   if (!companyId || !label || !number) {
@@ -232,13 +310,64 @@ exports.getVisitorInfo = asyncHandler(async (req, res) => {
 
   const visitorDetails = await visitor.findOne({
     companyId,
-    $expr: {
-      $eq: [`$fields.${label}`, number]
-    }
-  }).sort({ createdAt: -1 });;
+    $expr: { $eq: [`$fields.${label}`, number] },
+    status: 'entered', // Only fetch visitors who haven't exited
+    exitTime: null // Ensure no exit time
+  }).sort({ createdAt: -1 });
 
   if (!visitorDetails) {
-    return response.success("No visitor found", null, res);
+    return response.success("No active visitor found", { isActive: false }, res);
   }
-  return response.success("Visitor data fetched", visitorDetails.fields, res);
+
+  return response.success("Visitor data fetched", {
+    isActive: true,
+    fields: visitorDetails.fields,
+    entryTime: visitorDetails.entryTime
+  }, res);
 });
+
+
+
+
+
+exports.getVisitorInfoWatchmen = asyncHandler(async (req, res) => {
+  // const companyId = req.params.companyId;
+  const companyId = req.user.companyId;
+  
+  const visitors = await visitor.find({ companyId }).sort({ createdAt: -1 });
+  const vfield = await VisitorField.find({ companyId }).sort({ position: 1 });
+
+  const allowedLabels = vfield.map(field => field.label);
+  const filteredVisitors = visitors.map(vis => {
+    const filteredFields = {};
+
+    for (const key in vis.fields) {
+      if (allowedLabels.includes(key)) {
+        filteredFields[key] = vis.fields[key];
+      }
+    }
+
+    return {
+      ...vis.toObject(),
+      fields: filteredFields,
+    };
+  });
+  return response.success("Visitors fetched successfully", filteredVisitors, res);
+});
+
+exports.exitVisitorWatchmen = asyncHandler(async (req, res) => {
+  const { visitorId } = req.params;
+
+  const visitorRecord = await visitor.findById(visitorId);
+  if (!visitorRecord) {
+    return response.notFound("No visitor found", res);
+  }
+
+  visitorRecord.exitTime = new Date();
+  visitorRecord.status = 'exited';
+  await visitorRecord.save();
+
+  return response.success("Visitor exit recorded successfully", visitorRecord, res);
+}); 
+
+

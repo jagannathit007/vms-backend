@@ -44,7 +44,7 @@ const encryptedPassword = encrypt(password);
   });
   // 2. Insert 3 default visitor fields
   const defaultFields = [
-    { label: 'Mobile No', fieldType: 'number', companyId: company._id,"validation":{min:10,max:10},position:1 },
+    { label: 'Mobile No', fieldType: 'number', companyId: company._id,"validation":{min:10,max:10},position:1 ,otpRequired:true},
     { label: 'Name', fieldType: 'text', companyId: company._id ,position:2},
     { label: 'Purpose', fieldType: 'textarea', companyId: company._id,position:3 }
   ];

@@ -2,5 +2,7 @@
 module.exports = {
     superAdmin: require('./super-admin'),
     company: require('./company'),
-    visitor: require('./visitor')
+    visitor: require('./visitor'),
+    member: require('./member'),
+    watchmen: require('./watchmen')
 }
